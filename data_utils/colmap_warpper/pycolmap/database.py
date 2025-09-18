@@ -7,10 +7,47 @@ import sqlite3
 # convert SQLite BLOBs to/from numpy arrays
 
 def array_to_blob(arr):
-    return np.getbuffer(arr)
+    return arr.tobytes()
 
 def blob_to_array(blob, dtype, shape=(-1,)):
     return np.frombuffer(blob, dtype).reshape(*shape)
+
+
+_LEGACY_PRIOR_Q_COLUMNS = ("prior_qw", "prior_qx", "prior_qy", "prior_qz")
+_LEGACY_PRIOR_T_COLUMNS = ("prior_tx", "prior_ty", "prior_tz")
+_MODERN_PRIOR_Q_COLUMNS = (
+    "qvec_prior_w",
+    "qvec_prior_x",
+    "qvec_prior_y",
+    "qvec_prior_z",
+)
+_MODERN_PRIOR_T_COLUMNS = ("tvec_prior_x", "tvec_prior_y", "tvec_prior_z")
+
+
+def _get_image_prior_columns(db):
+    cache_attr = "_colmap_image_prior_columns"
+    try:
+        cached = getattr(db, cache_attr)
+    except AttributeError:
+        cached = None
+    if cached is None:
+        cursor = db.execute("PRAGMA table_info(images)")
+        column_names = {row[1] for row in cursor.fetchall()}
+        legacy = set(_LEGACY_PRIOR_Q_COLUMNS + _LEGACY_PRIOR_T_COLUMNS)
+        modern = set(_MODERN_PRIOR_Q_COLUMNS + _MODERN_PRIOR_T_COLUMNS)
+        if legacy.issubset(column_names):
+            cached = (_LEGACY_PRIOR_Q_COLUMNS, _LEGACY_PRIOR_T_COLUMNS)
+        elif modern.issubset(column_names):
+            cached = (_MODERN_PRIOR_Q_COLUMNS, _MODERN_PRIOR_T_COLUMNS)
+        else:
+            raise RuntimeError(
+                "Unexpected COLMAP images schema: missing known prior columns"
+            )
+        try:
+            setattr(db, cache_attr, cached)
+        except AttributeError:
+            pass
+    return cached
 
 
 #-------------------------------------------------------------------------------
@@ -112,9 +149,25 @@ def add_descriptors(db, image_id, descriptors):
 
 def add_image(db, name, camera_id, prior_q=np.zeros(4), prior_t=np.zeros(3),
         image_id=None):
-    db.execute("INSERT INTO images VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (image_id, name, camera_id, prior_q[0], prior_q[1], prior_q[2],
-         prior_q[3], prior_t[0], prior_t[1], prior_t[2]))
+    prior_q_columns, prior_t_columns = _get_image_prior_columns(db)
+    column_names = ("image_id", "name", "camera_id") + prior_q_columns + prior_t_columns
+    placeholders = ", ".join(["?"] * len(column_names))
+    values = (
+        image_id,
+        name,
+        camera_id,
+        prior_q[0],
+        prior_q[1],
+        prior_q[2],
+        prior_q[3],
+        prior_t[0],
+        prior_t[1],
+        prior_t[2],
+    )
+    db.execute(
+        f"INSERT INTO images ({', '.join(column_names)}) VALUES ({placeholders})",
+        values,
+    )
 
 
 # config: defaults to fundamental matrix
@@ -190,6 +243,7 @@ class COLMAPDatabase(sqlite3.Connection):
             lambda: self.executescript(CREATE_MATCHES_TABLE)
 
         self.create_name_index = lambda: self.executescript(CREATE_NAME_INDEX)
+        self._colmap_image_prior_columns = None
 
 
     add_camera = add_camera
