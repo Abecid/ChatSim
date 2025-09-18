@@ -63,4 +63,6 @@ if __name__ == "__main__":
         scene_setting = scene_setting_dict[downloaded_file_short]
         start_frame = scene_setting['start_frame']
         frame_nums = scene_setting['frame_nums']
-        os.system(f'python process_waymo.py --tfrecord_dir "{tfrecord_dir}" --nerf_data_dir {args.nerf_data_dir} --start_frame {start_frame} --frame_nums {frame_nums}')
+        ret = os.system(f'python process_waymo.py --tfrecord_dir "{tfrecord_dir}" --nerf_data_dir {args.nerf_data_dir} --start_frame {start_frame} --frame_nums {frame_nums}')
+        if ret != 0:
+            break

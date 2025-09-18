@@ -124,7 +124,8 @@ def main():
     for f_num, data in enumerate(tqdm(dataset)):
         frame = open_dataset.Frame()
         frames.append(frame)
-        frame.ParseFromString(bytearray(data.numpy()))
+        # frame.ParseFromString(bytearray(data.numpy()))
+        frame.ParseFromString(data.numpy())
         pose = np.zeros([len(frame.images), 4, 4])
         im_paths = {}
         pcd_paths = {}
