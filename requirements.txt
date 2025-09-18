@@ -45,3 +45,7 @@ gdown
 plyfile
 tensorboard
 gsplat
+
+# For Waymo Open Dataset
+tensorflow==2.13.0
+waymo-open-dataset-tf-2-12-0==1.6.7

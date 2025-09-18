@@ -48,7 +48,7 @@ if __name__ == "__main__":
         os.makedirs(folder_path)
 
     if os.path.exists(point3D_txt):  
-        print("文件已存在")  
+        print("colmap points3D.txt exists")
     else:  
         with open(point3D_txt, 'w') as file:  
             pass 

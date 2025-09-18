@@ -3,18 +3,27 @@
 
 DATASET_PATH=$1
 
+DB="$DATASET_PATH/colmap/database.db"
+SPARSE="$DATASET_PATH/colmap/sparse"
+UND="$DATASET_PATH/colmap/sparse_undistorted"
+
+rm -f "$DB"
+rm -rf "$SPARSE" "$UND"
+
 python transform2colmap_chatsim.py \
     --input_path $DATASET_PATH \
 
 colmap feature_extractor \
    --database_path $DATASET_PATH/colmap/database.db \
-   --image_path $DATASET_PATH/images 
+   --image_path $DATASET_PATH/images \
+   --SiftExtraction.use_gpu=0
 
 python inject_to_database.py \
     --input_path $DATASET_PATH 
 
 colmap exhaustive_matcher \
-    --database_path $DATASET_PATH/colmap/database.db
+    --database_path $DATASET_PATH/colmap/database.db \
+    --SiftMatching.use_gpu=0
 
 mkdir $DATASET_PATH/colmap/sparse
 mkdir $DATASET_PATH/colmap/sparse/not_align # not aligned to waymo's scale
@@ -30,11 +39,11 @@ colmap mapper \
     --Mapper.multiple_models 1 \
     --Mapper.init_min_tri_angle 1 \
     --Mapper.ba_global_max_num_iterations 30 \
-    --Mapper.ba_global_images_ratio 1.3 \
     --Mapper.ba_global_points_ratio 1.3 \
     --Mapper.ba_global_images_freq 200 \
     --Mapper.ba_global_points_freq 3500 \
-    --Mapper.filter_min_tri_angle 0.1 \
+    --Mapper.filter_min_tri_angle 0.1
+    # --Mapper.ba_global_images_ratio 1.3 \
 
 # undistortion is necessary for gaussian splatting, but not McNeRF
 colmap image_undistorter \
