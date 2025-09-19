@@ -40,6 +40,13 @@ CREATE_IMAGES_TABLE = """CREATE TABLE IF NOT EXISTS images (
     MAX_IMAGE_ID
 )
 
+CREATE_POSE_PRIORS_TABLE = """CREATE TABLE IF NOT EXISTS pose_priors (
+    image_id INTEGER PRIMARY KEY NOT NULL,
+    position BLOB,
+    coordinate_system INTEGER NOT NULL,
+    position_covariance BLOB,
+    FOREIGN KEY(image_id) REFERENCES images(image_id) ON DELETE CASCADE)"""
+
 CREATE_TWO_VIEW_GEOMETRIES_TABLE = """
 CREATE TABLE IF NOT EXISTS two_view_geometries (
     pair_id INTEGER PRIMARY KEY NOT NULL,
@@ -74,6 +81,7 @@ CREATE_ALL = "; ".join(
     [
         CREATE_CAMERAS_TABLE,
         CREATE_IMAGES_TABLE,
+        CREATE_POSE_PRIORS_TABLE,
         CREATE_KEYPOINTS_TABLE,
         CREATE_DESCRIPTORS_TABLE,
         CREATE_MATCHES_TABLE,
@@ -84,15 +92,29 @@ CREATE_ALL = "; ".join(
 
 def array_to_blob(array):
     if IS_PYTHON3:
-        return array.tostring()
+        return array.tobytes()
     else:
         return np.getbuffer(array)
 
+
 def blob_to_array(blob, dtype, shape=(-1,)):
     if IS_PYTHON3:
-        return np.fromstring(blob, dtype=dtype).reshape(*shape)
+        return np.frombuffer(blob, dtype=dtype).reshape(*shape)
     else:
         return np.frombuffer(blob, dtype=dtype).reshape(*shape)
+
+_PRIOR_Q_COLUMN_CANDIDATES = (
+    ("prior_qw", "qvec_prior_w"),
+    ("prior_qx", "qvec_prior_x"),
+    ("prior_qy", "qvec_prior_y"),
+    ("prior_qz", "qvec_prior_z"),
+)
+_PRIOR_T_COLUMN_CANDIDATES = (
+    ("prior_tx", "tvec_prior_x"),
+    ("prior_ty", "tvec_prior_y"),
+    ("prior_tz", "tvec_prior_z"),
+)
+
 
 class COLMAPDatabase(sqlite3.Connection):
 
@@ -117,18 +139,92 @@ class COLMAPDatabase(sqlite3.Connection):
         self.create_matches_table = \
             lambda: self.executescript(CREATE_MATCHES_TABLE)
         self.create_name_index = lambda: self.executescript(CREATE_NAME_INDEX)
+        self._image_prior_spec = None
+
+    def _get_image_prior_spec(self):
+        if self._image_prior_spec is None:
+            cursor = self.execute("PRAGMA table_info(images)")
+            column_names = {row[1] for row in cursor.fetchall()}
+
+            def _select_candidates(candidate_groups):
+                selected = []
+                for group in candidate_groups:
+                    for candidate in group:
+                        if candidate in column_names:
+                            selected.append(candidate)
+                            break
+                return selected
+
+            prior_q_columns = _select_candidates(_PRIOR_Q_COLUMN_CANDIDATES)
+            prior_t_columns = _select_candidates(_PRIOR_T_COLUMN_CANDIDATES)
+
+            if len(prior_q_columns) == 4 and len(prior_t_columns) == 3:
+                self._image_prior_spec = {
+                    "storage": "images",
+                    "q_columns": tuple(prior_q_columns),
+                    "t_columns": tuple(prior_t_columns),
+                }
+            else:
+                pose_priors_exists = bool(
+                    self.execute(
+                        "SELECT name FROM sqlite_master "
+                        "WHERE type='table' AND name='pose_priors'"
+                    ).fetchone()
+                )
+                if pose_priors_exists:
+                    self._image_prior_spec = {"storage": "pose_priors"}
+                else:
+                    known_columns = {
+                        candidate
+                        for group in (
+                            _PRIOR_Q_COLUMN_CANDIDATES + _PRIOR_T_COLUMN_CANDIDATES
+                        )
+                        for candidate in group
+                    }
+                    missing = sorted(known_columns - column_names)
+                    raise RuntimeError(
+                        "Unexpected COLMAP images schema: missing known prior columns "
+                        "and pose_priors table (absent: {})".format(
+                            ", ".join(missing)
+                        )
+                    )
+        return self._image_prior_spec
 
     def update_camera(self, model, width, height, params, camera_id):
         params = np.asarray(params, np.float64)
         cursor = self.execute(
             "UPDATE cameras SET model=?, width=?, height=?, params=?, prior_focal_length=True WHERE camera_id=?",
-            (model, width, height, array_to_blob(params),camera_id))
+            (model, width, height, array_to_blob(params), camera_id))
         return cursor.lastrowid
-    
+
     def update_image(self, IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID):
+        prior_spec = self._get_image_prior_spec()
+        if prior_spec["storage"] == "images":
+            prior_q_columns = prior_spec["q_columns"]
+            prior_t_columns = prior_spec["t_columns"]
+            column_updates = [f"{col}=?" for col in prior_q_columns + prior_t_columns]
+            column_updates.append("camera_id=?")
+            sql = f"UPDATE images SET {', '.join(column_updates)} WHERE image_id=?"
+            values = (QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, IMAGE_ID)
+            cursor = self.execute(sql, values)
+            return cursor.lastrowid
+
         cursor = self.execute(
-            "UPDATE images SET prior_qw=?,  prior_qx=?, prior_qy=?, prior_qz=?, prior_tx=?, prior_ty=?, prior_tz=? ,camera_id=? WHERE image_id=?",
-            (QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, IMAGE_ID),
+            "UPDATE images SET camera_id=? WHERE image_id=?",
+            (CAMERA_ID, IMAGE_ID),
+        )
+        position = np.asarray([TX, TY, TZ], dtype=np.float64)
+        covariance = np.full((3, 3), np.nan, dtype=np.float64)
+        self.execute(
+            "INSERT OR REPLACE INTO pose_priors "
+            "(image_id, position, coordinate_system, position_covariance) "
+            "VALUES (?, ?, ?, ?)",
+            (
+                IMAGE_ID,
+                array_to_blob(position),
+                -1,
+                array_to_blob(covariance),
+            ),
         )
         return cursor.lastrowid
 

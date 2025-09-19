@@ -7,10 +7,81 @@ import sqlite3
 # convert SQLite BLOBs to/from numpy arrays
 
 def array_to_blob(arr):
-    return np.getbuffer(arr)
+    return arr.tobytes()
 
 def blob_to_array(blob, dtype, shape=(-1,)):
     return np.frombuffer(blob, dtype).reshape(*shape)
+
+
+_PRIOR_Q_COLUMN_CANDIDATES = (
+    ("prior_qw", "qvec_prior_w"),
+    ("prior_qx", "qvec_prior_x"),
+    ("prior_qy", "qvec_prior_y"),
+    ("prior_qz", "qvec_prior_z"),
+)
+_PRIOR_T_COLUMN_CANDIDATES = (
+    ("prior_tx", "tvec_prior_x"),
+    ("prior_ty", "tvec_prior_y"),
+    ("prior_tz", "tvec_prior_z"),
+)
+
+
+def _get_image_prior_spec(db):
+    cache_attr = "_colmap_image_prior_spec"
+    try:
+        cached = getattr(db, cache_attr)
+    except AttributeError:
+        cached = None
+    if cached is None:
+        cursor = db.execute("PRAGMA table_info(images)")
+        column_names = {row[1] for row in cursor.fetchall()}
+        def _select_candidates(candidate_groups):
+            selected = []
+            for group in candidate_groups:
+                for candidate in group:
+                    if candidate in column_names:
+                        selected.append(candidate)
+                        break
+            return selected
+
+        prior_q_columns = _select_candidates(_PRIOR_Q_COLUMN_CANDIDATES)
+        prior_t_columns = _select_candidates(_PRIOR_T_COLUMN_CANDIDATES)
+
+        if len(prior_q_columns) == 4 and len(prior_t_columns) == 3:
+            cached = {
+                "storage": "images",
+                "q_columns": tuple(prior_q_columns),
+                "t_columns": tuple(prior_t_columns),
+            }
+        else:
+            pose_priors_exists = bool(
+                db.execute(
+                    "SELECT name FROM sqlite_master "
+                    "WHERE type='table' AND name='pose_priors'"
+                ).fetchone()
+            )
+            if pose_priors_exists:
+                cached = {"storage": "pose_priors"}
+            else:
+                known_columns = {
+                    candidate
+                    for group in (
+                        _PRIOR_Q_COLUMN_CANDIDATES + _PRIOR_T_COLUMN_CANDIDATES
+                    )
+                    for candidate in group
+                }
+                missing = sorted(known_columns - column_names)
+                raise RuntimeError(
+                    "Unexpected COLMAP images schema: missing known prior columns "
+                    "and pose_priors table (absent: {})".format(
+                        ", ".join(missing)
+                    )
+                )
+        try:
+            setattr(db, cache_attr, cached)
+        except AttributeError:
+            pass
+    return cached
 
 
 #-------------------------------------------------------------------------------
@@ -61,6 +132,13 @@ CREATE_IMAGES_TABLE = """CREATE TABLE IF NOT EXISTS images (
     CONSTRAINT image_id_check CHECK(image_id >= 0 and image_id < 2147483647),
     FOREIGN KEY(camera_id) REFERENCES cameras(camera_id))"""
 
+CREATE_POSE_PRIORS_TABLE = """CREATE TABLE IF NOT EXISTS pose_priors (
+    image_id INTEGER PRIMARY KEY NOT NULL,
+    position BLOB,
+    coordinate_system INTEGER NOT NULL,
+    position_covariance BLOB,
+    FOREIGN KEY(image_id) REFERENCES images(image_id) ON DELETE CASCADE)"""
+
 CREATE_INLIER_MATCHES_TABLE = """CREATE TABLE IF NOT EXISTS two_view_geometries (
     pair_id INTEGER PRIMARY KEY NOT NULL,
     rows INTEGER NOT NULL,
@@ -88,8 +166,8 @@ CREATE_NAME_INDEX = \
     "CREATE UNIQUE INDEX IF NOT EXISTS index_name ON images(name)"
 
 CREATE_ALL = "; ".join([CREATE_CAMERAS_TABLE, CREATE_DESCRIPTORS_TABLE,
-    CREATE_IMAGES_TABLE, CREATE_INLIER_MATCHES_TABLE, CREATE_KEYPOINTS_TABLE,
-    CREATE_MATCHES_TABLE, CREATE_NAME_INDEX])
+    CREATE_IMAGES_TABLE, CREATE_POSE_PRIORS_TABLE, CREATE_INLIER_MATCHES_TABLE,
+    CREATE_KEYPOINTS_TABLE, CREATE_MATCHES_TABLE, CREATE_NAME_INDEX])
 
 
 #-------------------------------------------------------------------------------
@@ -112,9 +190,48 @@ def add_descriptors(db, image_id, descriptors):
 
 def add_image(db, name, camera_id, prior_q=np.zeros(4), prior_t=np.zeros(3),
         image_id=None):
-    db.execute("INSERT INTO images VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (image_id, name, camera_id, prior_q[0], prior_q[1], prior_q[2],
-         prior_q[3], prior_t[0], prior_t[1], prior_t[2]))
+    prior_spec = _get_image_prior_spec(db)
+    if prior_spec["storage"] == "images":
+        prior_q_columns = prior_spec["q_columns"]
+        prior_t_columns = prior_spec["t_columns"]
+        column_names = ("image_id", "name", "camera_id") + prior_q_columns + prior_t_columns
+        placeholders = ", ".join(["?"] * len(column_names))
+        values = (
+            image_id,
+            name,
+            camera_id,
+            prior_q[0],
+            prior_q[1],
+            prior_q[2],
+            prior_q[3],
+            prior_t[0],
+            prior_t[1],
+            prior_t[2],
+        )
+        db.execute(
+            f"INSERT INTO images ({', '.join(column_names)}) VALUES ({placeholders})",
+            values,
+        )
+        return
+
+    cursor = db.execute(
+        "INSERT INTO images (image_id, name, camera_id) VALUES (?, ?, ?)",
+        (image_id, name, camera_id),
+    )
+    stored_image_id = image_id if image_id is not None else cursor.lastrowid
+    position = np.asarray(prior_t, dtype=np.float64)
+    covariance = np.full((3, 3), np.nan, dtype=np.float64)
+    db.execute(
+        "INSERT OR REPLACE INTO pose_priors "
+        "(image_id, position, coordinate_system, position_covariance) "
+        "VALUES (?, ?, ?, ?)",
+        (
+            stored_image_id,
+            array_to_blob(position),
+            -1,
+            array_to_blob(covariance),
+        ),
+    )
 
 
 # config: defaults to fundamental matrix
@@ -190,6 +307,7 @@ class COLMAPDatabase(sqlite3.Connection):
             lambda: self.executescript(CREATE_MATCHES_TABLE)
 
         self.create_name_index = lambda: self.executescript(CREATE_NAME_INDEX)
+        self._colmap_image_prior_spec = None
 
 
     add_camera = add_camera
