@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # 定义数据目录
 DATA_DIR="../data/waymo_multi_view"
