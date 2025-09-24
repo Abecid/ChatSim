@@ -36,6 +36,16 @@ scene_list = [
     'segment-16345319168590318167_1420_000_1440_000_with_camera_labels',
 ]
 
+scene_list = [
+    "segment-4487677815262010875_4940_000_4960_000_with_camera_labels",
+    "segment-5846229052615948000_2120_000_2140_000_with_camera_labels",
+    "segment-7761658966964621355_1000_000_1020_000_with_camera_labels",
+    "segment-9653249092275997647_980_000_1000_000_with_camera_labels",
+    "segment-10455472356147194054_1560_000_1580_000_with_camera_labels",
+    "segment-12505030131868863688_1740_000_1760_000_with_camera_labels",
+    "segment-16951470340360921766_2840_000_2860_000_with_camera_labels",
+]
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
