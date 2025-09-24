@@ -76,6 +76,8 @@ def gsplat_render(viewpoint_camera, pc : GaussianModel, args: omegaconf.dictconf
         rendered_image = OETF(rendered_image)
 
     radii = info["radii"].squeeze(0) # [N,]
+    if radii.dim() == 2:
+        radii = radii.amax(dim=-1)
     try:
         info["means2d"].retain_grad() # [1, N, 2]
     except:
