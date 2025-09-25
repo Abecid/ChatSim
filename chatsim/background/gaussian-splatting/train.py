@@ -109,26 +109,28 @@ def training(args, use_wandb=False):
         # Pick a random Camera
         if not viewpoint_stack:
             viewpoint_stack = scene.getTrainCameras().copy()
-        while viewpoint_cam is None or viewpoint_cam.uid in bad_views:
-            viewpoint_cam = viewpoint_stack.pop(randint(0, len(viewpoint_stack)-1))
+        # while viewpoint_cam is None or viewpoint_cam.uid in bad_views:
+        #     viewpoint_cam = viewpoint_stack.pop(randint(0, len(viewpoint_stack)-1))
+        viewpoint_cam = viewpoint_stack.pop(randint(0, len(viewpoint_stack)-1))
 
         uid = viewpoint_cam.uid        
 
         bg = torch.rand((3), device="cuda") if args.random_background else background
 
-        if check_bad_input(viewpoint_cam):
-            print(f"[SKIP] bad viewmat for {uid}")
-            bad_views.add(uid)
-            viewpoint_cam = None
-            continue
-
-        try:
-            render_pkg = render(viewpoint_cam, gaussians, args, bg, exposure_scale=viewpoint_cam.exposure_scale)
-        except Exception as e:
-            print("Rendering error for view {}: {}".format(viewpoint_cam.image_name, e))
-            bad_views.add(uid)
-            viewpoint_cam = None
-            continue
+        # if check_bad_input(viewpoint_cam):
+        #     print(f"[SKIP] bad viewmat for {uid}")
+        #     bad_views.add(uid)
+        #     viewpoint_cam = None
+        #     continue
+        
+        render_pkg = render(viewpoint_cam, gaussians, args, bg, exposure_scale=viewpoint_cam.exposure_scale)
+        # try:
+        #     render_pkg = render(viewpoint_cam, gaussians, args, bg, exposure_scale=viewpoint_cam.exposure_scale)
+        # except Exception as e:
+        #     print("Rendering error for view {}: {}".format(viewpoint_cam.image_name, e))
+        #     bad_views.add(uid)
+        #     viewpoint_cam = None
+        #     continue
         image, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
 
         if args.render_depth:
@@ -205,7 +207,8 @@ def training(args, use_wandb=False):
                     prune_mask = gaussians.densify_and_prune(args.densify_grad_threshold, 0.005, scene.cameras_extent, size_threshold)
                     N   = prune_mask.numel()
                     tot = prune_mask.sum().item()
-                    wandb.log({"scene/num_prunes" : tot, "scene/num_points" : N, "scene/prune_ratio": tot/N}, step=iteration)
+                    if use_wandb:
+                        wandb.log({"scene/num_prunes" : tot, "scene/num_points" : N, "scene/prune_ratio": tot/N}, step=iteration)
                 
                 if iteration % args.opacity_reset_interval == 0 or (args.white_background and iteration == args.densify_from_iter):
                     gaussians.reset_opacity()
@@ -262,11 +265,11 @@ if __name__ == "__main__":
     parser.add_argument("--base_config", type=str, default = "configs/default/train.yaml")
     parser.add_argument("--config", type=str, required=True)
     parser.add_argument("--wandb", action="store_true", help="Use wandb to log training")
-    ns, remaining = parser.parse_known_args()
+    ns, _ = parser.parse_known_args()
     
     base_conf = OmegaConf.load(ns.base_config)
     second_conf = OmegaConf.load(ns.config)
-    cli_conf = OmegaConf.from_cli(remaining)
+    cli_conf = OmegaConf.from_cli()
     args = OmegaConf.merge(base_conf, second_conf, cli_conf)
     
     # save args to args.model_path with OmegaConf

@@ -427,19 +427,37 @@ class GaussianModel:
         self.densify_and_clone(grads, max_grad, extent)
         self.densify_and_split(grads, max_grad, extent)
 
-        # prune_mask = (self.get_opacity < min_opacity).squeeze()
-        prune_mask = (self.get_opacity < min_opacity).reshape(-1)
+        prune_mask = (self.get_opacity < min_opacity).squeeze()
+        if max_screen_size:
+            big_points_vs = self.max_radii2D > max_screen_size
+            big_points_ws = self.get_scaling.max(dim=1).values > 0.1 * extent
+            prune_mask = torch.logical_or(torch.logical_or(prune_mask, big_points_vs), big_points_ws)
+
+        self.prune_points(prune_mask)
+
+        torch.cuda.empty_cache()
+
+        return prune_mask
+
+    def densify_and_prune_new(self, max_grad, min_opacity, extent, max_screen_size):
+        grads = self.xyz_gradient_accum / self.denom
+        grads[grads.isnan()] = 0.0
+
+        self.densify_and_clone(grads, max_grad, extent)
+        self.densify_and_split(grads, max_grad, extent)
+
+        prune_mask = (self.get_opacity < min_opacity).squeeze()
+        # prune_mask = (self.get_opacity < min_opacity).reshape(-1)
         if max_screen_size:
             mask_vs = (self.max_radii2D > max_screen_size).reshape(-1)
             scale_max = self.get_scaling.max(dim=1).values
-            # mask_ws = (self.get_scaling.max(dim=1).values > 0.1 * extent).reshape(-1)
             mask_ws = (scale_max > 0.1 * extent).reshape(-1).bool()
 
             N = prune_mask.numel()
             ws = int(mask_ws.sum().item())
             v = mask_vs.sum().item()
             o = prune_mask.sum().item()
-            print(f"Inital pruning candidates: {v} by screen size, {ws} by world size, {o} by opacity, from total {N} points.")
+            # print(f"Inital pruning candidates: {v} by screen size, {ws} by world size, {o} by opacity, from total {N} points.")
             cap = max(1, int(0.002 * N))
             if ws > cap:
                 ws_idx   = torch.nonzero(mask_ws, as_tuple=False).squeeze(1) 
@@ -460,7 +478,7 @@ class GaussianModel:
             v   = mask_vs.sum().item()
             w   = mask_ws.sum().item()
 
-            print(f"Pruning: {tot} points: {v} by screen size, {w} by world size, {o} by opacity, from total {N} points.")
+            # print(f"Pruning: {tot} points: {v} by screen size, {w} by world size, {o} by opacity, from total {N} points.")
 
         self.prune_points(prune_mask)
 
