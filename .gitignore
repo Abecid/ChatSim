@@ -171,4 +171,4 @@ chatsim/foreground/Blender/blender*
 chatsim/foreground/drl-based-trajectory-tracking
 setup.sh
 results
-.vscode
+# .vscode

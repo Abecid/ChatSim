@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Train ChatSim (conda chatsim)",
+      "type": "python",
+      "request": "launch",
+      "program": "train.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/chatsim/background/gaussian-splatting",
+      "python": "/home/fai/miniconda3/envs/chatsim/bin/python",
+      "args": [
+        "--config", "configs/chatsim/original.yaml",
+        "source_path=/home/fai/workspace/adam/ChatSim/data/waymo_multi_view/segment-4487677815262010875_4940_000_4960_000_with_camera_labels/colmap/sparse_undistorted",
+        "model_path=output/segment-4487677815262010875_4940_000_4960_000_with_camera_labels"
+      ],
+      "justMyCode": false
+    }
+  ]
+}

@@ -1,5 +1,5 @@
-testing_iterations: [10, 7000, 30000]
-saving_iterations: [10, 7000, 30000]
+testing_iterations: [10, 3000, 7000, 30000]
+saving_iterations: [10, 3000, 7000, 30000]
 checkpoint_iterations: []
 start_checkpoint: null
 quiet: false
