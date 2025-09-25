@@ -263,11 +263,11 @@ if __name__ == "__main__":
     parser.add_argument("--base_config", type=str, default = "configs/default/train.yaml")
     parser.add_argument("--config", type=str, required=True)
     parser.add_argument("--wandb", action="store_true", help="Use wandb to log training")
-    ns, remaining = parser.parse_known_args()
+    ns, _ = parser.parse_known_args()
     
     base_conf = OmegaConf.load(ns.base_config)
     second_conf = OmegaConf.load(ns.config)
-    cli_conf = OmegaConf.from_cli(remaining)
+    cli_conf = OmegaConf.from_cli()
     args = OmegaConf.merge(base_conf, second_conf, cli_conf)
     
     # save args to args.model_path with OmegaConf
