@@ -103,6 +103,7 @@ def blob_to_array(blob, dtype, shape=(-1,)):
     else:
         return np.frombuffer(blob, dtype=dtype).reshape(*shape)
 
+<<<<<<< HEAD
 _PRIOR_Q_COLUMN_CANDIDATES = (
     ("prior_qw", "qvec_prior_w"),
     ("prior_qx", "qvec_prior_x"),
@@ -114,6 +115,17 @@ _PRIOR_T_COLUMN_CANDIDATES = (
     ("prior_ty", "tvec_prior_y"),
     ("prior_tz", "tvec_prior_z"),
 )
+=======
+_LEGACY_PRIOR_Q_COLUMNS = ("prior_qw", "prior_qx", "prior_qy", "prior_qz")
+_LEGACY_PRIOR_T_COLUMNS = ("prior_tx", "prior_ty", "prior_tz")
+_MODERN_PRIOR_Q_COLUMNS = (
+    "qvec_prior_w",
+    "qvec_prior_x",
+    "qvec_prior_y",
+    "qvec_prior_z",
+)
+_MODERN_PRIOR_T_COLUMNS = ("tvec_prior_x", "tvec_prior_y", "tvec_prior_z")
+>>>>>>> fc34b0b5c73942f23e0517878acc50fd9685b518
 
 
 class COLMAPDatabase(sqlite3.Connection):
@@ -139,6 +151,7 @@ class COLMAPDatabase(sqlite3.Connection):
         self.create_matches_table = \
             lambda: self.executescript(CREATE_MATCHES_TABLE)
         self.create_name_index = lambda: self.executescript(CREATE_NAME_INDEX)
+<<<<<<< HEAD
         self._image_prior_spec = None
 
     def _get_image_prior_spec(self):
@@ -189,6 +202,31 @@ class COLMAPDatabase(sqlite3.Connection):
                         )
                     )
         return self._image_prior_spec
+=======
+        self._image_prior_columns = None
+
+    def _get_image_prior_columns(self):
+        if self._image_prior_columns is None:
+            cursor = self.execute("PRAGMA table_info(images)")
+            column_names = {row[1] for row in cursor.fetchall()}
+            legacy_columns = set(_LEGACY_PRIOR_Q_COLUMNS + _LEGACY_PRIOR_T_COLUMNS)
+            modern_columns = set(_MODERN_PRIOR_Q_COLUMNS + _MODERN_PRIOR_T_COLUMNS)
+            if legacy_columns.issubset(column_names):
+                self._image_prior_columns = (
+                    _LEGACY_PRIOR_Q_COLUMNS,
+                    _LEGACY_PRIOR_T_COLUMNS,
+                )
+            elif modern_columns.issubset(column_names):
+                self._image_prior_columns = (
+                    _MODERN_PRIOR_Q_COLUMNS,
+                    _MODERN_PRIOR_T_COLUMNS,
+                )
+            else:
+                raise RuntimeError(
+                    "Unexpected COLMAP images schema: missing known prior columns"
+                )
+        return self._image_prior_columns
+>>>>>>> fc34b0b5c73942f23e0517878acc50fd9685b518
 
     def update_camera(self, model, width, height, params, camera_id):
         params = np.asarray(params, np.float64)
@@ -198,6 +236,7 @@ class COLMAPDatabase(sqlite3.Connection):
         return cursor.lastrowid
 
     def update_image(self, IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID):
+<<<<<<< HEAD
         prior_spec = self._get_image_prior_spec()
         if prior_spec["storage"] == "images":
             prior_q_columns = prior_spec["q_columns"]
@@ -226,6 +265,14 @@ class COLMAPDatabase(sqlite3.Connection):
                 array_to_blob(covariance),
             ),
         )
+=======
+        prior_q_columns, prior_t_columns = self._get_image_prior_columns()
+        column_updates = [f"{col}=?" for col in prior_q_columns + prior_t_columns]
+        column_updates.append("camera_id=?")
+        sql = f"UPDATE images SET {', '.join(column_updates)} WHERE image_id=?"
+        values = (QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, IMAGE_ID)
+        cursor = self.execute(sql, values)
+>>>>>>> fc34b0b5c73942f23e0517878acc50fd9685b518
         return cursor.lastrowid
 
 def camTodatabase(txtfile, dbfile):

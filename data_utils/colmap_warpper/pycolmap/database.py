@@ -13,6 +13,7 @@ def blob_to_array(blob, dtype, shape=(-1,)):
     return np.frombuffer(blob, dtype).reshape(*shape)
 
 
+<<<<<<< HEAD
 _PRIOR_Q_COLUMN_CANDIDATES = (
     ("prior_qw", "qvec_prior_w"),
     ("prior_qx", "qvec_prior_x"),
@@ -28,6 +29,21 @@ _PRIOR_T_COLUMN_CANDIDATES = (
 
 def _get_image_prior_spec(db):
     cache_attr = "_colmap_image_prior_spec"
+=======
+_LEGACY_PRIOR_Q_COLUMNS = ("prior_qw", "prior_qx", "prior_qy", "prior_qz")
+_LEGACY_PRIOR_T_COLUMNS = ("prior_tx", "prior_ty", "prior_tz")
+_MODERN_PRIOR_Q_COLUMNS = (
+    "qvec_prior_w",
+    "qvec_prior_x",
+    "qvec_prior_y",
+    "qvec_prior_z",
+)
+_MODERN_PRIOR_T_COLUMNS = ("tvec_prior_x", "tvec_prior_y", "tvec_prior_z")
+
+
+def _get_image_prior_columns(db):
+    cache_attr = "_colmap_image_prior_columns"
+>>>>>>> fc34b0b5c73942f23e0517878acc50fd9685b518
     try:
         cached = getattr(db, cache_attr)
     except AttributeError:
@@ -35,6 +51,7 @@ def _get_image_prior_spec(db):
     if cached is None:
         cursor = db.execute("PRAGMA table_info(images)")
         column_names = {row[1] for row in cursor.fetchall()}
+<<<<<<< HEAD
         def _select_candidates(candidate_groups):
             selected = []
             for group in candidate_groups:
@@ -77,6 +94,18 @@ def _get_image_prior_spec(db):
                         ", ".join(missing)
                     )
                 )
+=======
+        legacy = set(_LEGACY_PRIOR_Q_COLUMNS + _LEGACY_PRIOR_T_COLUMNS)
+        modern = set(_MODERN_PRIOR_Q_COLUMNS + _MODERN_PRIOR_T_COLUMNS)
+        if legacy.issubset(column_names):
+            cached = (_LEGACY_PRIOR_Q_COLUMNS, _LEGACY_PRIOR_T_COLUMNS)
+        elif modern.issubset(column_names):
+            cached = (_MODERN_PRIOR_Q_COLUMNS, _MODERN_PRIOR_T_COLUMNS)
+        else:
+            raise RuntimeError(
+                "Unexpected COLMAP images schema: missing known prior columns"
+            )
+>>>>>>> fc34b0b5c73942f23e0517878acc50fd9685b518
         try:
             setattr(db, cache_attr, cached)
         except AttributeError:
@@ -190,6 +219,7 @@ def add_descriptors(db, image_id, descriptors):
 
 def add_image(db, name, camera_id, prior_q=np.zeros(4), prior_t=np.zeros(3),
         image_id=None):
+<<<<<<< HEAD
     prior_spec = _get_image_prior_spec(db)
     if prior_spec["storage"] == "images":
         prior_q_columns = prior_spec["q_columns"]
@@ -231,6 +261,26 @@ def add_image(db, name, camera_id, prior_q=np.zeros(4), prior_t=np.zeros(3),
             -1,
             array_to_blob(covariance),
         ),
+=======
+    prior_q_columns, prior_t_columns = _get_image_prior_columns(db)
+    column_names = ("image_id", "name", "camera_id") + prior_q_columns + prior_t_columns
+    placeholders = ", ".join(["?"] * len(column_names))
+    values = (
+        image_id,
+        name,
+        camera_id,
+        prior_q[0],
+        prior_q[1],
+        prior_q[2],
+        prior_q[3],
+        prior_t[0],
+        prior_t[1],
+        prior_t[2],
+    )
+    db.execute(
+        f"INSERT INTO images ({', '.join(column_names)}) VALUES ({placeholders})",
+        values,
+>>>>>>> fc34b0b5c73942f23e0517878acc50fd9685b518
     )
 
 
@@ -307,7 +357,11 @@ class COLMAPDatabase(sqlite3.Connection):
             lambda: self.executescript(CREATE_MATCHES_TABLE)
 
         self.create_name_index = lambda: self.executescript(CREATE_NAME_INDEX)
+<<<<<<< HEAD
         self._colmap_image_prior_spec = None
+=======
+        self._colmap_image_prior_columns = None
+>>>>>>> fc34b0b5c73942f23e0517878acc50fd9685b518
 
 
     add_camera = add_camera

@@ -9,7 +9,12 @@
 # For inquiries contact  george.drettakis@inria.fr
 #
 
+import faulthandler, signal
+faulthandler.enable(all_threads=True)
+
 import os
+import numpy as np
+
 import torch
 from random import randint
 from utils.loss_utils import l1_loss, ssim
@@ -24,18 +29,34 @@ from tqdm import tqdm
 from utils.image_utils import psnr
 from argparse import ArgumentParser, Namespace
 from arguments import ModelParams, PipelineParams, OptimizationParams
+import wandb
+
 try:
     from torch.utils.tensorboard import SummaryWriter
     TENSORBOARD_FOUND = True
 except ImportError:
     TENSORBOARD_FOUND = False
 
-def training(args):
+def check_bad_input(viewpoint_cam):
+    viewmat = viewpoint_cam.world_view_transform
+    if not torch.isfinite(torch.as_tensor(viewmat)).all():
+        return True
+    if getattr(viewpoint_cam, "K", None) is not None:
+        fx, fy, cx, cy = viewpoint_cam.K
+        if not np.isfinite([fx, fy, cx, cy]).all() or fx <= 0 or fy <= 0:
+            return True
+    return False
+
+def training(args, use_wandb=False):
     if TENSORBOARD_FOUND:
         tb_writer = SummaryWriter(args.model_path)
     else:
         tb_writer = None
         print("Tensorboard not available: not logging progress")
+
+    if use_wandb:
+        scene_name = args.model_path.split("/")[-1].split("_")[0].split("-")[1]
+        wandb.init(project=f"ChatSim_{scene_name}", config=OmegaConf.to_container(args, resolve=True))
 
     first_iter = 0
     gaussians = GaussianModel(args)
@@ -56,6 +77,10 @@ def training(args):
     ema_loss_for_log = 0.0
     progress_bar = tqdm(range(first_iter, args.iterations), desc="Training progress")
     first_iter += 1
+
+    bad_views = set()
+    viewpoint_cam = None
+
     for iteration in range(first_iter, args.iterations + 1):
         if args.gui:
             if network_gui.conn == None:
@@ -84,11 +109,26 @@ def training(args):
         # Pick a random Camera
         if not viewpoint_stack:
             viewpoint_stack = scene.getTrainCameras().copy()
-        viewpoint_cam = viewpoint_stack.pop(randint(0, len(viewpoint_stack)-1))
+        while viewpoint_cam is None or viewpoint_cam.uid in bad_views:
+            viewpoint_cam = viewpoint_stack.pop(randint(0, len(viewpoint_stack)-1))
+
+        uid = viewpoint_cam.uid        
 
         bg = torch.rand((3), device="cuda") if args.random_background else background
 
-        render_pkg = render(viewpoint_cam, gaussians, args, bg, exposure_scale=viewpoint_cam.exposure_scale)
+        if check_bad_input(viewpoint_cam):
+            print(f"[SKIP] bad viewmat for {uid}")
+            bad_views.add(uid)
+            viewpoint_cam = None
+            continue
+
+        try:
+            render_pkg = render(viewpoint_cam, gaussians, args, bg, exposure_scale=viewpoint_cam.exposure_scale)
+        except Exception as e:
+            print("Rendering error for view {}: {}".format(viewpoint_cam.image_name, e))
+            bad_views.add(uid)
+            viewpoint_cam = None
+            continue
         image, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
 
         if args.render_depth:
@@ -137,8 +177,12 @@ def training(args):
             ema_loss_for_log = 0.4 * loss.item() + 0.6 * ema_loss_for_log
             if iteration % 10 == 0:
                 postfix_dict = {"EMA Loss": f"{ema_loss_for_log:.{3}f}"}
+                if use_wandb:
+                    wandb.log({"train/EMA Loss": ema_loss_for_log}, step=iteration)
                 for key, value in loss_dict.items():
                     postfix_dict[key] = f"{value:.{3}f}"
+                    if use_wandb:
+                        wandb.log({f"train/{key}": value}, step=iteration)
                 progress_bar.set_postfix(postfix_dict)
                 progress_bar.update(10)
             if iteration == args.iterations:
@@ -158,7 +202,10 @@ def training(args):
 
                 if iteration > args.densify_from_iter and iteration % args.densification_interval == 0:
                     size_threshold = 20 if iteration > args.opacity_reset_interval else None
-                    gaussians.densify_and_prune(args.densify_grad_threshold, 0.005, scene.cameras_extent, size_threshold)
+                    prune_mask = gaussians.densify_and_prune(args.densify_grad_threshold, 0.005, scene.cameras_extent, size_threshold)
+                    N   = prune_mask.numel()
+                    tot = prune_mask.sum().item()
+                    wandb.log({"scene/num_prunes" : tot, "scene/num_points" : N, "scene/prune_ratio": tot/N}, step=iteration)
                 
                 if iteration % args.opacity_reset_interval == 0 or (args.white_background and iteration == args.densify_from_iter):
                     gaussians.reset_opacity()
@@ -214,11 +261,12 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Training script parameters")
     parser.add_argument("--base_config", type=str, default = "configs/default/train.yaml")
     parser.add_argument("--config", type=str, required=True)
-    args, _ = parser.parse_known_args()
+    parser.add_argument("--wandb", action="store_true", help="Use wandb to log training")
+    ns, remaining = parser.parse_known_args()
     
-    base_conf = OmegaConf.load(args.base_config)
-    second_conf = OmegaConf.load(args.config)
-    cli_conf = OmegaConf.from_cli()
+    base_conf = OmegaConf.load(ns.base_config)
+    second_conf = OmegaConf.load(ns.config)
+    cli_conf = OmegaConf.from_cli(remaining)
     args = OmegaConf.merge(base_conf, second_conf, cli_conf)
     
     # save args to args.model_path with OmegaConf
@@ -235,7 +283,7 @@ if __name__ == "__main__":
     if args.gui:
         network_gui.init(args.ip, args.port)
         torch.autograd.set_detect_anomaly(args.detect_anomaly)
-    training(args)
+    training(args, use_wandb=ns.wandb)
 
     # All done
     print("\nTraining complete.")

@@ -427,14 +427,46 @@ class GaussianModel:
         self.densify_and_clone(grads, max_grad, extent)
         self.densify_and_split(grads, max_grad, extent)
 
-        prune_mask = (self.get_opacity < min_opacity).squeeze()
+        # prune_mask = (self.get_opacity < min_opacity).squeeze()
+        prune_mask = (self.get_opacity < min_opacity).reshape(-1)
         if max_screen_size:
-            big_points_vs = self.max_radii2D > max_screen_size
-            big_points_ws = self.get_scaling.max(dim=1).values > 0.1 * extent
-            prune_mask = torch.logical_or(torch.logical_or(prune_mask, big_points_vs), big_points_ws)
+            mask_vs = (self.max_radii2D > max_screen_size).reshape(-1)
+            scale_max = self.get_scaling.max(dim=1).values
+            # mask_ws = (self.get_scaling.max(dim=1).values > 0.1 * extent).reshape(-1)
+            mask_ws = (scale_max > 0.1 * extent).reshape(-1).bool()
+
+            N = prune_mask.numel()
+            ws = int(mask_ws.sum().item())
+            v = mask_vs.sum().item()
+            o = prune_mask.sum().item()
+            print(f"Inital pruning candidates: {v} by screen size, {ws} by world size, {o} by opacity, from total {N} points.")
+            cap = max(1, int(0.002 * N))
+            if ws > cap:
+                ws_idx   = torch.nonzero(mask_ws, as_tuple=False).squeeze(1) 
+                topk_rel = torch.topk(scale_max[ws_idx], k=cap, largest=True).indices 
+                new_mask_ws = torch.zeros_like(mask_ws)
+                new_mask_ws[ws_idx[topk_rel]] = True                                      # prune only these
+                mask_ws = new_mask_ws
+                
+                # topk_idx = torch.topk(mask_vs, k, largest=True).indices  # prune only largest tail
+                # topk_idx = torch.topk(mask_ws, k, largest=True).indices  # prune only largest tail
+                # mask_ws = torch.zeros_like(mask_ws, dtype=torch.bool)
+                # mask_ws[topk_idx] = True
+
+            prune_mask = prune_mask | mask_vs | mask_ws
+            
+            N   = prune_mask.numel()
+            tot = prune_mask.sum().item()
+            v   = mask_vs.sum().item()
+            w   = mask_ws.sum().item()
+
+            print(f"Pruning: {tot} points: {v} by screen size, {w} by world size, {o} by opacity, from total {N} points.")
+
         self.prune_points(prune_mask)
 
         torch.cuda.empty_cache()
+
+        return prune_mask
 
     def add_densification_stats(self, viewspace_point_tensor, update_filter, width, height):
         # https://github.com/liruilong940607/gaussian-splatting/commit/258123ab8f8d52038da862c936bd413dc0b32e4d
