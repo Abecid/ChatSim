@@ -109,26 +109,28 @@ def training(args, use_wandb=False):
         # Pick a random Camera
         if not viewpoint_stack:
             viewpoint_stack = scene.getTrainCameras().copy()
-        while viewpoint_cam is None or viewpoint_cam.uid in bad_views:
-            viewpoint_cam = viewpoint_stack.pop(randint(0, len(viewpoint_stack)-1))
+        # while viewpoint_cam is None or viewpoint_cam.uid in bad_views:
+        #     viewpoint_cam = viewpoint_stack.pop(randint(0, len(viewpoint_stack)-1))
+        viewpoint_cam = viewpoint_stack.pop(randint(0, len(viewpoint_stack)-1))
 
         uid = viewpoint_cam.uid        
 
         bg = torch.rand((3), device="cuda") if args.random_background else background
 
-        if check_bad_input(viewpoint_cam):
-            print(f"[SKIP] bad viewmat for {uid}")
-            bad_views.add(uid)
-            viewpoint_cam = None
-            continue
-
-        try:
-            render_pkg = render(viewpoint_cam, gaussians, args, bg, exposure_scale=viewpoint_cam.exposure_scale)
-        except Exception as e:
-            print("Rendering error for view {}: {}".format(viewpoint_cam.image_name, e))
-            bad_views.add(uid)
-            viewpoint_cam = None
-            continue
+        # if check_bad_input(viewpoint_cam):
+        #     print(f"[SKIP] bad viewmat for {uid}")
+        #     bad_views.add(uid)
+        #     viewpoint_cam = None
+        #     continue
+        
+        render_pkg = render(viewpoint_cam, gaussians, args, bg, exposure_scale=viewpoint_cam.exposure_scale)
+        # try:
+        #     render_pkg = render(viewpoint_cam, gaussians, args, bg, exposure_scale=viewpoint_cam.exposure_scale)
+        # except Exception as e:
+        #     print("Rendering error for view {}: {}".format(viewpoint_cam.image_name, e))
+        #     bad_views.add(uid)
+        #     viewpoint_cam = None
+        #     continue
         image, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
 
         if args.render_depth:
