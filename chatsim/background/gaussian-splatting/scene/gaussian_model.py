@@ -439,7 +439,7 @@ class GaussianModel:
             ws = int(mask_ws.sum().item())
             v = mask_vs.sum().item()
             o = prune_mask.sum().item()
-            print(f"Inital pruning candidates: {v} by screen size, {ws} by world size, {o} by opacity, from total {N} points.")
+            # print(f"Inital pruning candidates: {v} by screen size, {ws} by world size, {o} by opacity, from total {N} points.")
             cap = max(1, int(0.002 * N))
             if ws > cap:
                 ws_idx   = torch.nonzero(mask_ws, as_tuple=False).squeeze(1) 
@@ -460,7 +460,7 @@ class GaussianModel:
             v   = mask_vs.sum().item()
             w   = mask_ws.sum().item()
 
-            print(f"Pruning: {tot} points: {v} by screen size, {w} by world size, {o} by opacity, from total {N} points.")
+            # print(f"Pruning: {tot} points: {v} by screen size, {w} by world size, {o} by opacity, from total {N} points.")
 
         self.prune_points(prune_mask)
 

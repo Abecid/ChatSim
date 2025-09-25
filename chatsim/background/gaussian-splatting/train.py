@@ -205,7 +205,8 @@ def training(args, use_wandb=False):
                     prune_mask = gaussians.densify_and_prune(args.densify_grad_threshold, 0.005, scene.cameras_extent, size_threshold)
                     N   = prune_mask.numel()
                     tot = prune_mask.sum().item()
-                    wandb.log({"scene/num_prunes" : tot, "scene/num_points" : N, "scene/prune_ratio": tot/N}, step=iteration)
+                    if use_wandb:
+                        wandb.log({"scene/num_prunes" : tot, "scene/num_points" : N, "scene/prune_ratio": tot/N}, step=iteration)
                 
                 if iteration % args.opacity_reset_interval == 0 or (args.white_background and iteration == args.densify_from_iter):
                     gaussians.reset_opacity()
