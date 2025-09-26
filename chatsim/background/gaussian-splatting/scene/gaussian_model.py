@@ -439,7 +439,7 @@ class GaussianModel:
 
         return prune_mask
 
-    def densify_and_prune2(self, max_grad, min_opacity, extent, max_screen_size, max_prune_ratio=0.01):
+    def densify_and_prune2(self, max_grad, min_opacity, extent, max_screen_size, max_prune_ratio=0.01, verbose=False):
         grads = self.xyz_gradient_accum / self.denom
         grads[grads.isnan()] = 0.0
 
@@ -455,9 +455,11 @@ class GaussianModel:
 
             N = prune_mask.numel()
             ws = int(mask_ws.sum().item())
-            v = mask_vs.sum().item()
-            o = prune_mask.sum().item()
-            # print(f"Inital pruning candidates: {v} by screen size, {ws} by world size, {o} by opacity, from total {N} points.")
+
+            if verbose:
+                v = mask_vs.sum().item()
+                o = prune_mask.sum().item()
+                print(f"Inital pruning candidates: {v} by screen size, {ws} by world size, {o} by opacity, from total {N} points.")
             cap = max(1, int(max_prune_ratio * N))
             if ws > cap:
                 ws_idx   = torch.nonzero(mask_ws, as_tuple=False).squeeze(1) 
@@ -473,12 +475,13 @@ class GaussianModel:
 
             prune_mask = prune_mask | mask_vs | mask_ws
             
-            N   = prune_mask.numel()
-            tot = prune_mask.sum().item()
-            v   = mask_vs.sum().item()
-            w   = mask_ws.sum().item()
+            if verbose:
+                N   = prune_mask.numel()
+                tot = prune_mask.sum().item()
+                v   = mask_vs.sum().item()
+                w   = mask_ws.sum().item()
 
-            # print(f"Pruning: {tot} points: {v} by screen size, {w} by world size, {o} by opacity, from total {N} points.")
+                print(f"Pruning: {tot} points: {v} by screen size, {w} by world size, {o} by opacity, from total {N} points.")
 
         self.prune_points(prune_mask)
 
