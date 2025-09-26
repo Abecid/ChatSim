@@ -204,7 +204,7 @@ def training(args, use_wandb=False):
 
                 if iteration > args.densify_from_iter and iteration % args.densification_interval == 0:
                     size_threshold = 20 if iteration > args.opacity_reset_interval else None
-                    prune_mask = gaussians.densify_and_prune(args.densify_grad_threshold, 0.005, scene.cameras_extent, size_threshold)
+                    prune_mask = gaussians.densify_and_prune2(args.densify_grad_threshold, 0.005, scene.cameras_extent, size_threshold)
                     N   = prune_mask.numel()
                     tot = prune_mask.sum().item()
                     if use_wandb:
