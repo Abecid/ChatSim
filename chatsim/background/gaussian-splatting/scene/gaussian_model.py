@@ -439,15 +439,15 @@ class GaussianModel:
 
         return prune_mask
 
-    def densify_and_prune_new(self, max_grad, min_opacity, extent, max_screen_size):
+    def densify_and_prune2(self, max_grad, min_opacity, extent, max_screen_size, max_prune_ratio=0.01):
         grads = self.xyz_gradient_accum / self.denom
         grads[grads.isnan()] = 0.0
 
         self.densify_and_clone(grads, max_grad, extent)
         self.densify_and_split(grads, max_grad, extent)
 
-        prune_mask = (self.get_opacity < min_opacity).squeeze()
-        # prune_mask = (self.get_opacity < min_opacity).reshape(-1)
+        # prune_mask = (self.get_opacity < min_opacity).squeeze()
+        prune_mask = (self.get_opacity < min_opacity).reshape(-1)
         if max_screen_size:
             mask_vs = (self.max_radii2D > max_screen_size).reshape(-1)
             scale_max = self.get_scaling.max(dim=1).values
@@ -458,7 +458,7 @@ class GaussianModel:
             v = mask_vs.sum().item()
             o = prune_mask.sum().item()
             # print(f"Inital pruning candidates: {v} by screen size, {ws} by world size, {o} by opacity, from total {N} points.")
-            cap = max(1, int(0.002 * N))
+            cap = max(1, int(max_prune_ratio * N))
             if ws > cap:
                 ws_idx   = torch.nonzero(mask_ws, as_tuple=False).squeeze(1) 
                 topk_rel = torch.topk(scale_max[ws_idx], k=cap, largest=True).indices 
