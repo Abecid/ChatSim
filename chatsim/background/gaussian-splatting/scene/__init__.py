@@ -12,6 +12,9 @@
 import os
 import random
 import json
+
+import time
+
 import torch
 from utils.system_utils import searchForMaxIteration
 from scene.dataset_readers import sceneLoadTypeCallbacks

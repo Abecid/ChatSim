@@ -8,7 +8,7 @@ import math
 from utils.graphics_utils import OETF
 
 
-def gsplat_render(viewpoint_camera, pc : GaussianModel, args: omegaconf.dictconfig.DictConfig, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None, exposure_scale = None, debug=False):
+def gsplat_render(viewpoint_camera, pc : GaussianModel, args: omegaconf.dictconfig.DictConfig, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None, exposure_scale = None, debug=False, regularize=False):
     """
     Render the scene. 
     
@@ -108,6 +108,16 @@ def gsplat_render(viewpoint_camera, pc : GaussianModel, args: omegaconf.dictconf
 
         if means3D.numel() == 0:
             raise RuntimeError("No Gaussians to render!")
+    
+    # Regularization
+    if regularize:
+        # clamp / sanitize scales and opacities
+        eps, max_scale = 1e-6, 1e3
+
+        scales = torch.clamp(scales, min=eps, max=max_scale)
+        rotations = rotations / torch.clamp(torch.linalg.norm(rotations, dim=-1, keepdim=True), min=eps)
+        opacity = torch.clamp(opacity.squeeze(-1), 0.0, 1.0)
+
 
     render_colors, render_alphas, info = rasterization(
         means=means3D,    # [N, 3]

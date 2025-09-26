@@ -1,5 +1,5 @@
-testing_iterations: [10, 7000, 20000]
-saving_iterations: [10, 7000, 20000]
+testing_iterations: [10, 7000, 30000]
+saving_iterations: [10, 7000, 30000]
 checkpoint_iterations: []
 start_checkpoint: null
 quiet: false
@@ -25,7 +25,7 @@ compute_cov3D_python: false
 debug: false
 
 # OptimizationParams
-iterations: 20000
+iterations: 30000
 position_lr_init: 0.00016
 position_lr_final: 0.0000016
 position_lr_delay_mult: 0.01
