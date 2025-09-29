@@ -1,4 +1,4 @@
-scene_name: &scene_name segment-4487677815262010875_4940_000_4960_000_with_camera_labels
+scene_name: &scene_name segment-9653249092275997647_980_000_1000_000_with_camera_labels
 
 scene:
   data_root: data/waymo_multi_view
