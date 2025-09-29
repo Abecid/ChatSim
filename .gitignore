@@ -175,3 +175,6 @@ results
 wandb
 submodules
 colmap
+
+waymo_skydome
+waymo_skydome_preload

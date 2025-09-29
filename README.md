@@ -162,7 +162,7 @@ We tested with [Blender 3.5.1](https://download.blender.org/release/Blender3.5/b
 
 #### Step 4.1: Install Blender software
 ```bash
-cd ../../Blender
+cd ../../../foreground/Blender
 wget https://download.blender.org/release/Blender3.5/blender-3.5.1-linux-x64.tar.xz
 tar -xvf blender-3.5.1-linux-x64.tar.xz
 rm blender-3.5.1-linux-x64.tar.xz

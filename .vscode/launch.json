@@ -1,20 +1,38 @@
+// {
+//   "version": "0.2.0",
+//   "configurations": [
+//     {
+//       "name": "Python: Train ChatSim (conda chatsim)",
+//       "type": "debugpy",
+//       "request": "launch",
+//       "program": "train.py",
+//       "console": "integratedTerminal",
+//       "cwd": "${workspaceFolder}/chatsim/background/gaussian-splatting",
+//       "python": "/home/fai/anaconda3/envs/chatsim/bin/python",
+//       "args": [
+//         "--config", "configs/chatsim/original.yaml",
+//         "source_path=/home/fai/workspace/adam/ChatSim/data/waymo_multi_view/segment-5846229052615948000_2120_000_2140_000_with_camera_labels/colmap/sparse_undistorted",
+//         "model_path=output/segment-5846229052615948000_2120_000_2140_000_with_camera_labels"
+//       ],
+//       "justMyCode": false
+//     }
+//   ]
+// }
+
 {
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python: Train ChatSim (conda chatsim)",
+      "name": "Python: mc_to_sky infer (conda chatsim)",
       "type": "debugpy",
       "request": "launch",
-      "program": "train.py",
+      "module": "mc_to_sky.tools.infer_waymo_batch",
+      "cwd": "${workspaceFolder}/chatsim/foreground/mclight/skydome_lighting",
       "console": "integratedTerminal",
-      "cwd": "${workspaceFolder}/chatsim/background/gaussian-splatting",
       "python": "/home/fai/anaconda3/envs/chatsim/bin/python",
-      "args": [
-        "--config", "configs/chatsim/original.yaml",
-        "source_path=/home/fai/workspace/adam/ChatSim/data/waymo_multi_view/segment-5846229052615948000_2120_000_2140_000_with_camera_labels/colmap/sparse_undistorted",
-        "model_path=output/segment-5846229052615948000_2120_000_2140_000_with_camera_labels"
-      ],
-      "justMyCode": false
+      "justMyCode": true,
+      "args": []
     }
   ]
 }
+
