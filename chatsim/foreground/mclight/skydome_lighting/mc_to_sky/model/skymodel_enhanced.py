@@ -255,4 +255,3 @@ class SkyModelEnhanced(pl.LightningModule):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.hypes['lr_schedule']['init_lr'])
         lr_scheduler = StepLR(optimizer=optimizer, step_size=self.hypes['lr_schedule']['decay_per_epoch'], gamma=self.hypes['lr_schedule']['decay_rate'])
         return [optimizer], [lr_scheduler]
-

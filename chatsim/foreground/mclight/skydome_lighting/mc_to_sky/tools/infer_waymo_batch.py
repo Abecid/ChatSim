@@ -20,10 +20,10 @@ os.environ['OPENCV_IO_ENABLE_OPENEXR'] = "1"
 
 def get_parser():
     parser = argparse.ArgumentParser(description='Example argparse program')
-    parser.add_argument("--config", "-y", type=str, help="path to config file")
-    parser.add_argument("--ckpt_path", "-c", type=str, default=None, help="path to ckpt file for restore training")
-    parser.add_argument("--waymo_scenes_dir", "-w", type=str, default="/home/yfl/workspace/f2-nerf/data/waymo_multi_view", help="path to image directory") 
-    parser.add_argument("--output_dir", "-o", type=str, help="path to store hdr panorama")
+    parser.add_argument("--config", "-y", type=str, default="/home/fai/workspace/adam/ChatSim/chatsim/foreground/mclight/skydome_lighting/mc_to_sky/config/stage2/multi_view_avg.yaml", help="path to config file")
+    parser.add_argument("--ckpt_path", "-c", type=str, default="/home/fai/workspace/adam/ChatSim/chatsim/foreground/mclight/logs/stage2_log/lightning_logs/version_0/checkpoints/epoch=269-val_loss=0.10.ckpt", help="path to ckpt file for restore training")
+    parser.add_argument("--waymo_scenes_dir", "-w", type=str, default="/home/fai/workspace/adam/ChatSim/data/waymo_multi_view", help="path to image directory") 
+    parser.add_argument("--output_dir", "-o", type=str, default="/home/fai/workspace/adam/ChatSim/waymo_skydome", help="path to store hdr panorama")
     args = parser.parse_args()
     return args
 

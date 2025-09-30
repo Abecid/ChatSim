@@ -29,7 +29,7 @@ def check_and_mkdirs(path):
         os.makedirs(path)
 
 def generate_video(scene, prompt, save_images=False):
-    video_output_path = os.path.join(scene.output_dir, scene.logging_name)
+    video_output_path = os.path.join(scene.output_dir, scene.short_scene_name, scene.simulation_name, scene.logging_name)
     check_and_mkdirs(video_output_path)
     filename = prompt.replace(' ', '_')[:40]
     fps = scene.fps

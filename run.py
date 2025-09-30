@@ -8,50 +8,52 @@ config_path = "config/psy/3dgs-waymo-{}.yaml"
 
 prompts = {
     "104": [
-        "Add a bulldozer 5m behind the black car crossing the street",
-        "Add a following vehicle behind the red classic vehicle",
-        "Add a parked vehicle at [-33293.25083473, 39228.75704265, -62.021820655151934]",
-        "Add a traffic light at [-33291.82, 39228.66, -62.74394]",
-        "Make a black car turning at the intersection to go straight",
-        "Remove a black car turning at the intersection",
-        "Remove all the pedestrians moving in the scene",
+        "Add a bulldozer 5m behind the intersection",
+        "Add a red vehicle turning at the intersection",
+        "Add a parked vehicle at [20, -10, 0]",
+        "Add a traffic cone at [20, -10, 0]",
+        "Create a bmw turning at the intersection",
+        "Create porsche 911 going straight at the intersection",
+        # "Remove all the pedestrians moving in the scene",
     ],
     "125": [
-        "Remove all the pedestrians crossing the street"
+        # "Remove all the pedestrians crossing the street"
     ],
     "169": [
-        "Add a concrete barrier in front of construction worker with orange vest",
-        "Add a new pedestrian crossing the street in front of ego",
-        "Add a new vehicle going straight at the intersection",
-        "Add a skid steer in front of construction worker with orange vest",
-        "Make a pedestrian with red coat walking forward to walk faster"
+        "Add a sign fence in the intersection",
+        "Add a new Tesla roadster crossing the street in front of ego",
+        "Add an audi going straight at the intersection",
+        "Add a loader truck in front of the intersection",
+        "Make a benz g go forward fast"
     ],
     "584": [
-        "Add a new vehicle going straight starting from next to the white car crossing the intersection",
-        "Add a pedestrian sitting on the wheelchair crossing the crosswalk next to the pedestrian standing on the left side",
-        "Add a pedestrian sitting on the wheelchair next to the pedestrian standing on the left side",
-        "Add a traffic cone at the left crosswalk at [-414.4302, 15551.24, -21.09849]",
-        "Make the white car moving left to right to stop at the intersection", 
-        "Remove the black bus across the street"
+        "Add a cadillac going straight starting from ego crossing the intersection",
+        "Add an audi crossing the crosswalk next to the pedestrian standing on the left side",
+        "Add a excavator next to the pedestrian standing on the left side",
+        "Add a traffic cone at the left crosswalk at [20, 10, 0]",
+        "Make a chevrolet moving left to right to stop at the intersection", 
+        # "Remove the black bus across the street"
     ],
     "776": [
-        "Add a following vehicle behind a sedan crossing the intersection moving right to left",
-        "Add a illegally parked car in front of a sedan crossing the intersection moving right to left",
-        "Make a sedan crossing the intersection moving right to left in front of ego to turn right",
-        "Make a vehicle moving forward from the opposite lane toward ego to slow down and stop",
-        "Remove a vehicle turning right at the intersection",
-        "Remove all the moving vehicles on the road"
+        "Add a m1a2 tank behind a sedan crossing the intersection moving right to left",
+        "Add an illegally parked benz s in front of a sedan crossing the intersection moving right to left",
+        "Make an audi turn right at the intersection",
+        "Make a ferrari coming towards me from the opposite lane to slow down and stop",
+        "Create a dodge srt turning right at the intersection",
+        # "Remove all the moving vehicles on the road"
     ],
     "448": [
-        "Add a stop sign next to the bus ahead",
-        "Replace a bus ahead of ego into a uhaul truck",
-        "Replace a yellow taxi stopped at the intserction on the left into white lamborghini"
+        "Add a traffic cone next to the bus ahead",
+        "Replace a bus ahead of ego into a lamborghini",
+        "Replace a yellow taxi stopped at the intserction on the left into lamborghini"
     ],
     "965": [
-        "Add a jaywalking pedestrian walking from (x,y,z) to (x,y,z)",
-        "Add a jaywalking pedestrian walking from (x,y,z) to (x,y,z)_with_refinement"
+        "Add a land rover range going from (10,0,0) to (30,-20,0)",
+        "Add a ferrari going from (10,-10,0) to (0,0,0)_with_refinement"
     ]
 }
+
+prepend_prompt = "Remove all cars in the scene and"
 
 def main():
     for scene in tqdm(os.listdir(waymo_path)):
@@ -64,11 +66,12 @@ def main():
         try:
             if scene_id in prompts:
                 for idx, prompt in enumerate(prompts[scene_id]):
+                    prompt = f"{prepend_prompt} {prompt}"
                     command = [
                         "python", "main.py",
                         "-y", scene_config_path,
                         "-p", prompt,
-                        "-s", f"{scene_id}_{idx}"
+                        "-s", f"idx_{idx}"
                     ]
                     print(" ".join(command))
                     # Run with Ctrl+C passthrough

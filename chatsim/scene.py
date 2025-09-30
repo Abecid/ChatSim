@@ -102,7 +102,9 @@ class Scene(nn.Module):
         short_scene_name = self.scene_name.lstrip('segment-')[:4]
 
         simulation_name = config['simulation_name'] # from main.py argparse
-        self.logging_name = current_time.strftime(f"{short_scene_name}_{simulation_name}_%Y_%m_%d_%H_%M_%S")
+        self.short_scene_name = short_scene_name
+        self.simulation_name = simulation_name
+        self.logging_name = current_time.strftime(f"%Y_%m_%d_%H_%M_%S")
 
         self.save_cache = config['save_cache']
         self.cache_dir = os.path.join(config["cache_dir"], self.logging_name)

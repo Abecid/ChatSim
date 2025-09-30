@@ -40,7 +40,7 @@ model:
 
   sky_model:
     core_method: sky_model_enhanced
-    ckpt_path: "YOUR CKPT HERE, ENDED WITH .ckpt"
+    ckpt_path: "/home/fai/workspace/adam/ChatSim/chatsim/foreground/mclight/logs/stage1_log/lightning_logs/version_0/checkpoints/epoch=119-val_loss=1.25.ckpt"
 
   latent_predictor:
     name: avg_multi_view
