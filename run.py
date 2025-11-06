@@ -8,48 +8,70 @@ config_path = "config/psy/3dgs-waymo-{}.yaml"
 
 prompts = {
     "104": [
-        "Add a bulldozer 5m behind the intersection",
-        "Add a red vehicle turning at the intersection",
-        "Add a parked vehicle at [20, -10, 0]",
-        "Add a traffic cone at [20, -10, 0]",
-        "Create a bmw turning at the intersection",
-        "Create porsche 911 going straight at the intersection",
-        # "Remove all the pedestrians moving in the scene",
+        "Make the red classic car turn right at the intersection",
+        "Make the red classic car go straight at the intersection",
+        "Make the red classic car stop at the intersection",
+        "Add a following vehicle 5m behind the red classic vehicle",
+        "Add a vehicle 5m ahead of the red classic vehicle",
+        "Add a stopped vehicle 5m ahead of the red classic vehicle",
+        "Add a traffic cone 5m behind the black car crossing the street",
+        "Remove a red classic vehicle",
+        "Remove a pedestrian with red backpack",
+        "Remove all vehicles",
+        "Add a pedestrian crossing the street",
+        "Make a pedestrian with red backpack walking forward to walk faster",
+        "Make a pedestrian with red backpack walking forward to walk slower",
+        "Make a pedestrian with pink jacket to walk faster at the crosswalk",
+        "Make a pedestrian with pink jacket to walk slower at the crosswalk"
     ],
     "125": [
-        # "Remove all the pedestrians crossing the street"
+        "Add a pedestrian jaywalking in front of ego vehicle",
+        "Add a pedestrian crossing the street on the right side of ego vehicle"
     ],
     "169": [
-        "Add a sign fence in the intersection",
-        "Add a new Tesla roadster crossing the street in front of ego",
-        "Add an audi going straight at the intersection",
-        "Add a loader truck in front of the intersection",
-        "Make a benz g go forward fast"
+        "Add a new vehicle turning left at the intersection",
+        "Add a new vehicle stopped at the intersection",
+        "Add a new vehicle following the black SUV at the intersection",
+        "Remove a pedestrian with red coat",
+        "Remove a constructino worker",
+        "Remove a benz stopped at the intersection",
+        "Add a pedestrian crossing the street in front of ego vehicle",
+        "Add a pedestrian crossing the street on the left side of ego vehicle",
+        "Make a pedestrian with red coat walking forward to stop",
+        "Make a construction worker with orange vest to cross the street faster",
+        "Make a construction worker with orange vest to cross the street slower"
     ],
     "584": [
-        "Add a cadillac going straight starting from ego crossing the intersection",
-        "Add an audi crossing the crosswalk next to the pedestrian standing on the left side",
-        "Add a excavator next to the pedestrian standing on the left side",
-        "Add a traffic cone at the left crosswalk at [20, 10, 0]",
-        "Make a chevrolet moving left to right to stop at the intersection", 
-        # "Remove the black bus across the street"
+        "Make the white car moving left to right turn left at the intersection",
+        "Make the white car moving left to right accelerate at the intersection",
+        "Make the white car moving left to right turn right at the intersection",
+        "Add a new vehicle turning left at the intersection starting at [-417.7167, 15544.44, -20.79474]",
+        "Add a new vehicle turning right starting at [-417.7167, 15544.44, -20.79474]",
+        "Add a pedestrian crossing the street in front of ego vehicle",
+        "Make a pedestrian with beige coat walk slower at the crosswalk",
+        "Make a pedestrian with beige coat walk faster at the crosswalk",
+        "Make a pedestrian with beige coat stop at the crosswalk"
     ],
     "776": [
-        "Add a m1a2 tank behind a sedan crossing the intersection moving right to left",
-        "Add an illegally parked benz s in front of a sedan crossing the intersection moving right to left",
-        "Make an audi turn right at the intersection",
-        "Make a ferrari coming towards me from the opposite lane to slow down and stop",
-        "Create a dodge srt turning right at the intersection",
-        # "Remove all the moving vehicles on the road"
+        "Make a sedan crossing the intersection moving right to left in front of ego turn right",
+        "Make a sedan crossing the intersection moving right to left in front of ego turn left",
+        "Make a sedan crossing the intersection moving right to left in front of ego stop",
+        "Make a sedan crossing the intersection moving right to left in front of ego accelerate",
+        "Add a following vehicle 5m behind a sedan crossing the intersection moving right to left",
+        "Add a concrete barrier in front of a sedan crossing the intersection moving right to left",
+        "Add a traffic cone in front of a sedan crossing the intersection moving right to left"
     ],
     "448": [
-        "Add a traffic cone next to the bus ahead",
-        "Replace a bus ahead of ego into a lamborghini",
-        "Replace a yellow taxi stopped at the intserction on the left into lamborghini"
+        "Add a traffic light next to the bus ahead",
+        "Remove a yellow taxi stopped at the intersection",
+        "Remove a bus ahead",
+        "Remove all the vehicles",
+        "Add a pedestrian crossing the street in front of ego vehicle",
+        "Add a pedestrian walking on the sidewalk at the right side of ego vehicle"
     ],
     "965": [
-        "Add a land rover range going from (10,0,0) to (30,-20,0)",
-        "Add a ferrari going from (10,-10,0) to (0,0,0)_with_refinement"
+        "Add a road block in front of grey car going straight",
+        "Add a traffic cone in front of grey car going straight"
     ]
 }
 
